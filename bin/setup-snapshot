@@ -1,0 +1,10 @@
+#!/usr/bin/env python3
+"""Launcher: runs the package from this checkout. Use `python3 -I bin/setup-snapshot ...`."""
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+
+from setup_snapshot.cli import main  # noqa: E402
+
+sys.exit(main())

@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+*.snap.tar.gz
+*.snap.tar.gz.part

@@ -1,0 +1,15 @@
+{
+  "name": "setup-snapshot",
+  "owner": {
+    "name": "cyberzeed",
+    "url": "https://github.com/cyberzeed"
+  },
+  "plugins": [
+    {
+      "name": "setup-snapshot",
+      "source": "./",
+      "description": "Pack a Claude Code setup into one verifiable snapshot and install it elsewhere."
+    }
+  ],
+  "description": "Pack a Claude Code setup into one verifiable snapshot and install it on another machine."
+}
