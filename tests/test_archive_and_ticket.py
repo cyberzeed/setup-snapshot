@@ -158,6 +158,22 @@ class SafeExtractTests(unittest.TestCase):
                 with self.assertRaises(SnapshotError):
                     self.extract()
 
+    def test_plugin_config_limited_to_plain_values(self):
+        for bad in [
+            {"config": {"webhookUrl": "https://x.example/hook"}},
+            {"config": {"GITHUB_TOKEN": True}},
+            {"config": {"bad key": 1}},
+            {"config": ["x"]},
+            {"config_keys": ["bad key"]},
+            {"config_keys": "ledger"},
+        ]:
+            with self.subTest(bad=bad):
+                man = minimal_manifest([])
+                man["plugins"] = [{"id": "x@y", "name": "x", "marketplace": "y", **bad}]
+                craft(self.arc, [], man)
+                with self.assertRaises(SnapshotError):
+                    self.extract()
+
     def test_not_gzip(self):
         self.arc.write_bytes(b"not an archive")
         with self.assertRaises(SnapshotError):

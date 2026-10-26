@@ -117,10 +117,17 @@ def plugin_commands(plugins: list, home: Path) -> list:
             else:
                 cmds.append(f"# marketplace {market!r}: source {kind!r} must be provided by hand")
         commit = p.get("git_commit") or p.get("version") or "unknown"
-        cmds.append(f"claude plugin install {shlex.quote(p['id'])}   # sender had {commit}; verify before enabling")
+        config = "".join(f" --config {shlex.quote(k + '=' + _config_str(v))}" for k, v in p.get("config", {}).items())
+        cmds.append(f"claude plugin install {shlex.quote(p['id'])}{config}   # sender had {commit}; verify before enabling")
+        if p.get("config_keys"):
+            cmds.append(f"# set {', '.join(p['config_keys'])} for {p['id']} yourself (/plugin configure {p['id']})")
         if not p.get("enabled"):
             cmds.append(f"claude plugin disable {shlex.quote(p['id'])}   # disabled on the sender")
     return cmds
+
+
+def _config_str(v) -> str:
+    return ("true" if v else "false") if isinstance(v, bool) else str(v)
 
 
 def mcp_commands(servers: list, home: Path) -> list:

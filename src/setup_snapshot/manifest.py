@@ -112,6 +112,11 @@ def validate(m: object) -> dict:
     for p in m.get("plugins", []):
         if not isinstance(p, dict) or not all(isinstance(p.get(k), str) and NAME_RE.match(p[k]) for k in ("id", "name", "marketplace")):
             _fail("plugin entry needs plain id, name and marketplace")
+        config, config_keys = p.get("config", {}), p.get("config_keys", [])
+        if not isinstance(config, dict) or not all(isinstance(k, str) and NAME_RE.match(k) and is_plain_config_value(k, v) for k, v in config.items()):
+            _fail(f"plugin {p['id']}: config may only carry plain values")
+        if not isinstance(config_keys, list) or not all(isinstance(k, str) and NAME_RE.match(k) for k in config_keys):
+            _fail(f"plugin {p['id']}: bad config key")
     for s in m.get("mcp_servers", []):
         if not isinstance(s, dict) or not isinstance(s.get("name"), str) or not NAME_RE.match(s["name"]):
             _fail("mcp server entry needs a plain name")
@@ -133,6 +138,18 @@ PLAIN_ENV_VALUE_RE = re.compile(r"(?i)^(true|false|yes|no|on|off|[0-9]{1,6})$")
 
 def is_plain_env_value(name: str, value) -> bool:
     return isinstance(value, str) and not is_secret_name(name) and bool(PLAIN_ENV_VALUE_RE.match(value))
+
+
+# Plugin options (pluginConfigs.<id>.options) follow the same rule, plus JSON booleans, small
+# integers and empty strings. Losing ponytail's ledger=false would turn the CSV ledger back on.
+def is_plain_config_value(name: str, value) -> bool:
+    if is_secret_name(name):
+        return False
+    if isinstance(value, bool):
+        return True
+    if isinstance(value, int):
+        return abs(value) < 1_000_000
+    return value == "" or is_plain_env_value(name, value)
 
 
 NAME_RE = re.compile(r"^[A-Za-z0-9._@:-]{1,200}$")

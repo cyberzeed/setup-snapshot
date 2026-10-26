@@ -56,6 +56,13 @@ class Machine:
                 "permissions": {"allow": ["Bash(ls:*)"], "deny": ["Read(./.env)"]},
                 "hooks": {"Stop": [{"hooks": [{"type": "command", "command": "echo done"}]}]},
                 "enabledPlugins": {"pordee@pordee": True},
+                "pluginConfigs": {"pordee@pordee": {"options": {
+                    "ledger": False,
+                    "retries": 3,
+                    "webhookUrl": "https://hooks.example.com/private-board",
+                    "level": "full",
+                    "API_TOKEN": "1",
+                }}},
                 "theme": "dark",
             }),
         )

@@ -246,7 +246,10 @@ class Collector:
             if src.get("source") in ("directory", "path", "file"):
                 self.warnings.append(f"plugin {pid}: marketplace is a local path; the receiver must provide it")
             e = entries[0]
-            out.append({
+            options = ((s.get("pluginConfigs") or {}).get(pid) or {}).get("options") or {}
+            options = options if isinstance(options, dict) else {}
+            config = {k: v for k, v in options.items() if mf.is_plain_config_value(k, v)}
+            entry = {
                 "id": pid,
                 "name": name,
                 "marketplace": market,
@@ -254,7 +257,10 @@ class Collector:
                 "version": e.get("version"),
                 "git_commit": e.get("gitCommitSha"),
                 "enabled": bool(enabled.get(pid, False)),
-            })
+                "config": dict(sorted(config.items())),
+                "config_keys": sorted(k for k in options if k not in config),
+            }
+            out.append({k: v for k, v in entry.items() if v not in ({}, [])})
         return out
 
     def mcp(self) -> list:

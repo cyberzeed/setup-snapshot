@@ -80,6 +80,32 @@ class CollectTests(unittest.TestCase):
         self.assertNotIn("real-value-here", json.dumps(c.mcp_servers))
         self.assertNotIn("U-private-id", json.dumps(c.mcp_servers))
 
+    def test_plugin_config_keeps_only_plain_values(self):
+        p = self.m.collect().plugins[0]
+        self.assertEqual(p["config"], {"ledger": False, "retries": 3})
+        self.assertEqual(p["config_keys"], ["API_TOKEN", "level", "webhookUrl"])
+        self.assertNotIn("private-board", json.dumps(p))
+        for name, value, kept in [
+            ("ledger", False, True),
+            ("retries", 3, True),
+            ("webhookUrl", "", True),
+            ("mode", "on", True),
+            ("API_TOKEN", True, False),  # secret-looking name
+            ("webhookUrl", "https://x.example/hook", False),
+            ("big", 10**9, False),
+            ("list", ["a"], False),
+        ]:
+            with self.subTest(name=name, value=value):
+                self.assertEqual(mf.is_plain_config_value(name, value), kept)
+
+    def test_plugin_without_config_has_no_config_fields(self):
+        s = json.loads((self.m.claude / "settings.json").read_text())
+        del s["pluginConfigs"]
+        self.m.write("settings.json", json.dumps(s))
+        p = self.m.collect().plugins[0]
+        self.assertNotIn("config", p)
+        self.assertNotIn("config_keys", p)
+
     def test_mcp_keeps_only_plain_flag_values(self):
         c = self.m.collect()
         self.assertEqual(c.mcp_servers[0]["env"], {"NPM_CONFIG_IGNORE_SCRIPTS": "true"})
