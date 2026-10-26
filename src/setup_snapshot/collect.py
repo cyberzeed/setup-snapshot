@@ -269,6 +269,8 @@ class Collector:
             if not isinstance(cfg, dict):
                 continue
             args = [str(a) for a in cfg.get("args", [])]
+            env = cfg.get("env") or {}
+            kept = {k: v for k, v in env.items() if mf.is_plain_env_value(k, v)}
             label = f"mcpServers.{name}"
             self._scan("\n".join([str(cfg.get("command", "")), str(cfg.get("url", ""))] + args), label)
             entry = {
@@ -277,10 +279,11 @@ class Collector:
                 "command": self._tokenize(str(cfg.get("command", ""))) or None,
                 "args": [self._tokenize(a) for a in args],
                 "url": cfg.get("url"),
-                "env_keys": sorted((cfg.get("env") or {}).keys()),
+                "env": dict(sorted(kept.items())),
+                "env_keys": sorted(k for k in env if k not in kept),
                 "header_keys": sorted((cfg.get("headers") or {}).keys()),
             }
-            out.append({k: v for k, v in entry.items() if v not in (None, [], "")})
+            out.append({k: v for k, v in entry.items() if v not in (None, [], "", {})})
         return out
 
     # ---- run -------------------------------------------------------------

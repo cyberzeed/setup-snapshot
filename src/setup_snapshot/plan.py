@@ -23,6 +23,7 @@ class PlanItem:
     mode: int = 0o644
     status: str = NEW
     merge: bool = False
+    changes: list = field(default_factory=list)  # settings key paths a merge adds or changes
 
 
 @dataclass
@@ -68,6 +69,30 @@ def _load_json(path: Path) -> dict:
     return data
 
 
+def key_changes(before: dict, after: dict, prefix: str = "") -> list:
+    """Key paths that differ after a deep_merge, without values (settings may hold private data)."""
+    out = []
+    for k in sorted(after):
+        path = prefix + _printable(k)
+        old, new = before.get(k), after[k]
+        if k in before and old == new:
+            continue
+        if isinstance(new, dict) and new and (k not in before or isinstance(old, dict)):
+            out += key_changes(old or {}, new, path + ".")
+        elif k not in before:
+            out.append(f"added    {path}")
+        elif isinstance(old, list) and isinstance(new, list):
+            out.append(f"extended {path} (+{len(new) - len(old)})")
+        else:
+            out.append(f"changed  {path}")
+    return out
+
+
+def _printable(key: str) -> str:
+    # Keys come from the untrusted archive and end up on the terminal.
+    return key.encode("unicode_escape").decode("ascii") if mf.CONTROL_RE.search(key) or not key.isprintable() else key
+
+
 def merged_settings(claude_dir: Path, partials: list) -> bytes:
     current = _load_json(claude_dir / "settings.json")
     merged = current
@@ -102,7 +127,10 @@ def mcp_commands(servers: list, home: Path) -> list:
     cmds = []
     for s in servers:
         name = shlex.quote(s["name"])
-        envs = " ".join(f"-e {shlex.quote(k + '=')}" for k in s.get("env_keys", []))
+        envs = " ".join(
+            [f"-e {shlex.quote(k + '=' + v)}" for k, v in s.get("env", {}).items()]
+            + [f"-e {shlex.quote(k + '=')}" for k in s.get("env_keys", [])]
+        )
         if s.get("type") in ("http", "sse") and s.get("url"):
             headers = " ".join(f"--header {shlex.quote(k + ': ')}" for k in s.get("header_keys", []))
             cmds.append(f"claude mcp add --scope user --transport {s['type']} {headers} {name} {shlex.quote(s['url'])}".replace("  ", " "))
@@ -133,11 +161,12 @@ def build(extracted: Path, manifest: dict, claude_dir: Path, home: Path) -> Plan
         status = NEW if not target.exists() else (SAME if target.read_bytes() == data else CHANGED)
         items.append(PlanItem(rel, entry["category"], entry["risk"], target, data, mode, status))
     if partials:
-        current = (claude_dir / "settings.json").read_bytes() if (claude_dir / "settings.json").exists() else None
-        preview = merged_settings(claude_dir, partials)
+        exists = (claude_dir / "settings.json").exists()
+        current = _load_json(claude_dir / "settings.json")
         for it in items:
             if it.merge:
-                it.status = NEW if current is None else (SAME if json.loads(preview) == json.loads(current) else CHANGED)
+                it.changes = key_changes(current, deep_merge(current, json.loads(it.data)))
+                it.status = NEW if not exists else (CHANGED if it.changes else SAME)
     return Plan(manifest, items, plugin_commands(manifest.get("plugins", []), home), mcp_commands(manifest.get("mcp_servers", []), home))
 
 
@@ -155,6 +184,7 @@ def render(plan: Plan) -> str:
             if i.status != SAME:
                 flag = "  HIGH" if i.risk == mf.HIGH else ""
                 lines.append(f"    {i.status:<8} {i.rel}{flag}")
+                lines += [f"        {c}" for c in i.changes]
     if plan.plugin_commands:
         lines += ["", "[plugin] risk=high  commands to run yourself after review:"] + [f"    {c}" for c in plan.plugin_commands]
     if plan.mcp_commands:

@@ -76,8 +76,25 @@ class CollectTests(unittest.TestCase):
         c = self.m.collect()
         self.assertEqual(c.plugins[0]["id"], "pordee@pordee")
         self.assertEqual(c.plugins[0]["git_commit"], "32f6e5518ca7")
-        self.assertEqual(c.mcp_servers[0]["env_keys"], ["DOCS_API_KEY"])
+        self.assertEqual(c.mcp_servers[0]["env_keys"], ["AUTH_ENABLED", "DESTINATION_USER_ID", "DOCS_API_KEY"])
         self.assertNotIn("real-value-here", json.dumps(c.mcp_servers))
+        self.assertNotIn("U-private-id", json.dumps(c.mcp_servers))
+
+    def test_mcp_keeps_only_plain_flag_values(self):
+        c = self.m.collect()
+        self.assertEqual(c.mcp_servers[0]["env"], {"NPM_CONFIG_IGNORE_SCRIPTS": "true"})
+        for name, value, kept in [
+            ("NPM_CONFIG_IGNORE_SCRIPTS", "true", True),
+            ("DEBUG", "0", True),
+            ("PORT", "8080", True),
+            ("AUTH_ENABLED", "true", False),  # secret-looking name
+            ("GITHUB_TOKEN", "1", False),
+            ("REGION", "us-east-1", False),  # not a flag
+            ("FLAG", "true; rm -rf ~", False),
+            ("FLAG", True, False),  # not a string
+        ]:
+            with self.subTest(name=name, value=value):
+                self.assertEqual(mf.is_plain_env_value(name, value), kept)
 
     def test_notes_opt_in(self):
         c = self.m.collect(Profile.from_dict({"notes_dirs": ["notes"]}))

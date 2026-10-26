@@ -8,6 +8,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+from .scan import is_secret_name
+
 FORMAT = "setup-snapshot"
 FORMAT_VERSION = 1
 MANIFEST_NAME = "manifest.json"
@@ -118,7 +120,19 @@ def validate(m: object) -> dict:
         for k in s.get("env_keys", []) + s.get("header_keys", []):
             if not isinstance(k, str) or not NAME_RE.match(k):
                 _fail(f"mcp server {s['name']}: bad env or header key")
+        env = s.get("env", {})
+        if not isinstance(env, dict) or not all(isinstance(k, str) and NAME_RE.match(k) and is_plain_env_value(k, v) for k, v in env.items()):
+            _fail(f"mcp server {s['name']}: env may only carry plain flag values")
     return m
+
+
+# MCP env values are dropped, except flags like NPM_CONFIG_IGNORE_SCRIPTS=true: losing those
+# silently weakens the receiver. Only short booleans and numbers under non-secret names are kept.
+PLAIN_ENV_VALUE_RE = re.compile(r"(?i)^(true|false|yes|no|on|off|[0-9]{1,6})$")
+
+
+def is_plain_env_value(name: str, value) -> bool:
+    return isinstance(value, str) and not is_secret_name(name) and bool(PLAIN_ENV_VALUE_RE.match(value))
 
 
 NAME_RE = re.compile(r"^[A-Za-z0-9._@:-]{1,200}$")

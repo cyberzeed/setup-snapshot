@@ -149,6 +149,15 @@ class SafeExtractTests(unittest.TestCase):
         with self.assertRaises(SnapshotError):
             self.extract()
 
+    def test_mcp_env_values_limited_to_plain_flags(self):
+        for env in [{"GITHUB_TOKEN": "1"}, {"REGION": "us-east-1"}, {"FLAG": "true $(id)"}, {"bad name": "1"}, ["X"]]:
+            with self.subTest(env=env):
+                man = minimal_manifest([])
+                man["mcp_servers"] = [{"name": "srv", "command": "npx", "env": env}]
+                craft(self.arc, [], man)
+                with self.assertRaises(SnapshotError):
+                    self.extract()
+
     def test_not_gzip(self):
         self.arc.write_bytes(b"not an archive")
         with self.assertRaises(SnapshotError):

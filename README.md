@@ -21,7 +21,7 @@ Status: v0.1.0, pre-release. macOS and Linux, Python 3.9+ standard library only.
 | keybindings | `~/.claude/keybindings.json` | low |
 | notes (opt-in) | dirs you list in the profile | medium |
 | plugin | metadata only: marketplace, id, commit | high, receiver reinstalls |
-| mcp | metadata only: command, args, env key names | high, env values never stored |
+| mcp | metadata only: command, args, env key names; plain flag values (`true`, `0`, `8080`) under non-secret names | high, every other env value dropped |
 
 Never collected: `.credentials.json`, `projects/` (sessions, transcripts), history, todos, plugin caches, `.env*`, `*.pem`, `id_*`, anything with `credentials` in the name. Every collected file is secret-scanned; a hit aborts the build and names `path:line: rule`, never the value.
 

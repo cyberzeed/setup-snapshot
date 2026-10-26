@@ -67,7 +67,12 @@ class Machine:
         self.write(".credentials.json", '{"token": "x"}')
         self.write("projects/p/session.jsonl", "{}\n")
         self.claude_json.write_text(
-            json.dumps({"mcpServers": {"docs": {"command": "npx", "args": ["-y", "docs-mcp@1.2.3"], "env": {"DOCS_API_KEY": "real-value-here"}}}}),
+            json.dumps({"mcpServers": {"docs": {"command": "npx", "args": ["-y", "docs-mcp@1.2.3"], "env": {
+                "DOCS_API_KEY": "real-value-here",
+                "NPM_CONFIG_IGNORE_SCRIPTS": "true",
+                "DESTINATION_USER_ID": "U-private-id",
+                "AUTH_ENABLED": "1",
+            }}}}),
             encoding="utf-8",
         )
         return self

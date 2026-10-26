@@ -7,6 +7,7 @@ from pathlib import Path
 from helpers import Machine
 
 from setup_snapshot.cli import main
+from setup_snapshot.plan import key_changes
 
 
 def run(*argv):
@@ -64,7 +65,14 @@ class EndToEnd(unittest.TestCase):
         self.assertEqual(code, 0, err)
         self.assertIn("[hooks] risk=high", out)
         self.assertIn("claude plugin install pordee@pordee", out)
-        self.assertIn("-e DOCS_API_KEY=", out)
+        self.assertIn("-e NPM_CONFIG_IGNORE_SCRIPTS=true -e AUTH_ENABLED= -e DESTINATION_USER_ID= -e DOCS_API_KEY=", out)
+        self.assertIn("fill in AUTH_ENABLED, DESTINATION_USER_ID, DOCS_API_KEY for docs", out)
+        self.assertIn("    CHANGED  settings.json\n        added    env.GRAPHIFY_BACKEND\n", out)
+        self.assertIn("        added    permissions.allow\n", out)
+        self.assertIn("        extended permissions.deny (+1)\n", out)
+        self.assertIn("        changed  theme\n", out)
+        self.assertNotIn("model", out)  # unchanged receiver key
+        self.assertNotIn("none", out)  # values are never printed
         self.assertEqual((self.receiver.claude / "settings.json").read_bytes(), before)
         self.assertFalse((self.receiver.claude / "agents").exists())
 
@@ -137,6 +145,25 @@ class EndToEnd(unittest.TestCase):
         self.recv("apply", ticket, "--approve", "agent")
         code, out, _ = run("status", "--claude-dir", str(self.receiver.claude))
         self.assertIn("snap1", out)
+
+
+
+class KeyChangesTests(unittest.TestCase):
+    def test_paths_without_values(self):
+        before = {"a": 1, "keep": "x", "d": {"x": 1}, "l": [1], "s": "scalar"}
+        after = {"a": 2, "keep": "x", "d": {"x": 1, "y": {"z": 3}}, "l": [1, 2], "s": {"now": "dict"}, "new": {}}
+        self.assertEqual(key_changes(before, after), [
+            "changed  a",
+            "added    d.y.z",
+            "extended l (+1)",
+            "added    new",
+            "changed  s",
+        ])
+
+    def test_control_characters_in_keys_are_escaped(self):
+        out = key_changes({}, {"evil\x1b]0;pwn\x07": 1})
+        self.assertEqual(out, ["added    evil\\x1b]0;pwn\\x07"])
+        self.assertNotIn("\x1b", out[0])
 
 
 if __name__ == "__main__":
