@@ -7,7 +7,7 @@ sender:   create  ->  push  ->  ticket (5 lines, no secrets)
 receiver: paste ticket  ->  plan (verify sha256, check every file)  ->  apply approved categories  ->  rollback if needed
 ```
 
-Status: v0.1.0, pre-release. macOS and Linux, Python 3.9+ standard library only. No server, no account, no telemetry.
+Status: v0.1.1, pre-release. macOS and Linux, Python 3.9+ standard library only. No server, no account, no telemetry.
 
 ## What goes in a snapshot
 
@@ -32,7 +32,7 @@ The archive is a plain `tar.gz` with `manifest.json` and `payload/`. Open it wit
 Install from a clone checked out at a release tag, never from `main`. `claude plugin marketplace add` has no documented way to pin a tag, so the clone is what pins the version.
 
 ```sh
-git clone --branch v0.1.0 --depth 1 https://github.com/cyberzeed/setup-snapshot.git ~/.local/share/setup-snapshot
+git clone --branch v0.1.1 --depth 1 https://github.com/cyberzeed/setup-snapshot.git ~/.local/share/setup-snapshot
 git -C ~/.local/share/setup-snapshot rev-parse HEAD    # compare with the commit on the release page
 claude plugin marketplace add ~/.local/share/setup-snapshot
 claude plugin install setup-snapshot@setup-snapshot
@@ -42,9 +42,9 @@ Upgrade: read the changelog and the diff, then check out the new tag and refresh
 
 ```sh
 cd ~/.local/share/setup-snapshot
-git fetch --depth 1 origin tag v0.2.0
-git diff v0.1.0 v0.2.0 --stat
-git checkout v0.2.0
+git fetch --depth 1 origin tag v0.1.1
+git diff v0.1.0 v0.1.1 --stat
+git checkout v0.1.1
 claude plugin marketplace update setup-snapshot
 claude plugin update setup-snapshot@setup-snapshot
 ```

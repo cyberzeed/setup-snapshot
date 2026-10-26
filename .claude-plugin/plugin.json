@@ -1,6 +1,6 @@
 {
   "name": "setup-snapshot",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Pack a Claude Code setup into one verifiable snapshot and install it on another machine after a reviewed, risk-tiered plan.",
   "license": "MIT",
   "skills": [
